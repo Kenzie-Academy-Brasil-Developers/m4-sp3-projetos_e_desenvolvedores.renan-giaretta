@@ -1,0 +1,18 @@
+{
+  "compilerOptions": {
+  // coloca qual versão do javascript será utilizada na conversão do typescript
+    "target": "es2016",
+    "module": "CommonJS",
+  // Informa para o código quais são os diretórios contendo as tipagens do projeto
+    "typeRoots": ["src/@types", "node_modules/@types"],
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+  // Obriga o desenvolvedor a tipar tudo no código
+    "strict": true,
+    "exactOptionalPropertyTypes": true,
+    "skipLibCheck": true
+    },
+  // quando compilar o typescript, inclui todo o src e desconsidera o node_modules
+    "include": ["src/*"],
+    "exclude": ["node_modules"]
+  }
