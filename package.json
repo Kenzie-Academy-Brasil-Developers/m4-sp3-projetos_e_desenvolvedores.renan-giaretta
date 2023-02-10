@@ -9,10 +9,16 @@
   "author": "renangiaretta <renan.giaretta@hotmail.com>",
   "license": "MIT",
   "scripts": {
-    "dev": "tsnd --cls --rs --ignore-watch node_modules src/app.js"
+    "dev": "tsnd --cls --rs --ignore-watch node_modules src/app.ts"
   },
   "dependencies": {
     "@types/express": "^4.17.17",
-    "express": "^4.18.2"
+    "@types/pg": "^8.6.6",
+    "@types/pg-format": "^1.0.2",
+    "dotenv": "^16.0.3",
+    "express": "^4.18.2",
+    "pg": "^8.9.0",
+    "pg-format": "^1.0.4",
+    "ts-node-dev": "^2.0.0"
   }
 }
