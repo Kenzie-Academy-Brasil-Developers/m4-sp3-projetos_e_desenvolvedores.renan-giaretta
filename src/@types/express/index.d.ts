@@ -5,9 +5,9 @@ declare global {
     namespace Express {
         interface Request {
             indexList   : number
-            validateData: {
+            validateDeveloperData: {
             name        : string,
-            quantity    : string
+            email    : string
             }
         }
         interface Response {
