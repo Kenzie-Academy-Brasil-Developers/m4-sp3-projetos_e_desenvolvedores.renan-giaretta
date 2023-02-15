@@ -236,9 +236,26 @@ const updateDeveloperInfo = async ( request: Request, response: Response ): Prom
 // PROJECTS
 
 const createNewProject = async ( request: Request, response: Response ): Promise<Response> => {
-    return response.status(201).json({
-        message: 'aaa'
-    })
+    const projectId: number = parseInt(request.params.id)
+    const projectDataRequest = request.body
+    const projectData = {
+        ...projectDataRequest
+    }
+    const queryFormat = format(`
+    INSERT INTO
+        projects(%I)
+    VALUES(%L)
+    RETURNING*;    
+    `,
+    Object.keys(request.body),
+    Object.values(request.body)
+    )
+    const queryConfig = {
+        text: queryFormat,
+        values: [projectId]
+    }
+    const queryResult = await client.query(queryConfig)
+    return response.status(201).json(queryResult.rows[0])
 }
 
 const getProject = async ( request: Request, response: Response ): Promise<Response> => {
