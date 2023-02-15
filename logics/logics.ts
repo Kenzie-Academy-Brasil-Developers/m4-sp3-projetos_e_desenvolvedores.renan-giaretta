@@ -221,8 +221,8 @@ const updateDeveloperInfo = async ( request: Request, response: Response ): Prom
     WHERE
         "id" = $1
     `,
-    Object.keys(request.body),
-    Object.values(request.body)
+    Object.keys(developerData),
+    Object.values(developerData)
     )
     const QueryConfig: QueryConfig = {
         text: queryFormat,
@@ -236,7 +236,6 @@ const updateDeveloperInfo = async ( request: Request, response: Response ): Prom
 // PROJECTS
 
 const createNewProject = async ( request: Request, response: Response ): Promise<Response> => {
-    const projectId: number = parseInt(request.params.id)
     const projectDataRequest = request.body
     const projectData = {
         ...projectDataRequest
@@ -250,36 +249,85 @@ const createNewProject = async ( request: Request, response: Response ): Promise
     Object.keys(request.body),
     Object.values(request.body)
     )
-    const queryConfig = {
-        text: queryFormat,
-        values: [projectId]
-    }
-    const queryResult = await client.query(queryConfig)
+    const queryResult: QueryResult = await client.query(queryFormat)
     return response.status(201).json(queryResult.rows[0])
 }
 
 const getProject = async ( request: Request, response: Response ): Promise<Response> => {
-    return response.status(201).json({
-        message: 'aaa'
-    })
+    const projectId: number = parseInt(request.params.id)
+    const queryString = `
+    SELECT 
+        *
+    FROM
+        projects
+    WHERE
+        "projectsId" = $1
+    `
+    const queryConfig: QueryConfig = {
+        text: queryString,
+        values: [projectId]
+    }
+    const queryResult: QueryResult = await client.query(queryConfig)
+    return response.status(209).json(queryResult.rows[0])
 }
 
 const getAllProjects = async ( request: Request, response: Response ): Promise<Response> => {
-    return response.status(201).json({
-        message: 'aaa'
-    })
+    const queryString: string = `
+    SELECT
+        *
+    FROM
+        projects
+    `
+    const queryResult = await client.query(queryString)
+    return response.status(200).json(queryResult.rows)
 }
 
 const updateProject = async ( request: Request, response: Response ): Promise<Response> => {
-    return response.status(201).json({
-        message: 'aaa'
-    })
+    const projectId: number = parseInt(request.params.id)
+    const projectDataRequest = request.body
+    const projectData = {
+        ...projectDataRequest
+    }
+    const queryFormat = format(`
+    UPDATE
+        projects
+    SET
+        (%I) = ROW (%L)
+    WHERE
+        "projectsId" = $1
+    `,
+    Object.keys(projectData),
+    Object.values(projectData)
+    )
+    const queryConfig: QueryConfig = {
+        text: queryFormat,
+        values: [projectId]
+    }
+    const queryResult: QueryResult = await client.query(queryConfig)
+    return response.status(200).json(projectData)
 }
 
 const deleteProject = async ( request: Request, response: Response ): Promise<Response> => {
-    return response.status(201).json({
-        message: 'aaa'
-    })
+    const projectId = parseInt(request.params.id)
+    const projectDataRequest = request.body
+    const projectData = {
+        ...projectDataRequest
+    }
+    const queryString: string = format(`
+    DELETE FROM
+        projects
+    WHERE
+        "projectsId" = $1
+    `,
+    Object.keys(projectData),
+    Object.values(projectData)
+    )
+    const queryConfig: QueryConfig = {
+        text: queryString,
+        values: [projectId]
+    }
+    const queryResult: QueryResult = await client.query(queryConfig)
+    return response.status(200).json('deletad') 
 }
 
 const registerTechnologyOnProject = async ( request: Request, response: Response ): Promise<Response> => {
