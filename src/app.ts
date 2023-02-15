@@ -1,18 +1,18 @@
 import express, { Application, Request, Response } from 'express'
 import { startDatabase } from './../database'
-import { createNewDeveloper, createNewInfo, createNewProject, deleteDeveloper, deleteProject, deleteTechnologyFromProject, getAllDevelopers, getAllProductsFromDeveloper, getAllProjects, getDeveloper, getProject, registerTechnologyOnProject, updateDeveloper, updateDeveloperInfo, updateProject } from './../logics/logics'
+import { createNewDeveloper, createNewDeveloperInfo, createNewProject, deleteDeveloper, deleteProject, deleteTechnologyFromProject, getAllDevelopers, getAllProductsFromDeveloper, getAllProjects, getDeveloper, getProject, registerTechnologyOnProject, updateDeveloper, updateDeveloperInfo, updateProject } from './../logics/logics'
 
 
 const app: Application = express()
 app.use(express.json())
 
 app.post('/developers', createNewDeveloper)
-app.get('developers', getAllDevelopers)
-app.get('developers/:id', getDeveloper)
+app.get('/developers', getAllDevelopers)
+app.get('/developers/:id', getDeveloper)
 app.get('/developers/:id/projects', getAllProductsFromDeveloper)
 app.patch('/developers/:id', updateDeveloper)
-app.delete('developers/:id', deleteDeveloper)
-app.post('/developers/:id/infos', createNewInfo)
+app.delete('/developers/:id', deleteDeveloper)
+app.post('/developers/:id/infos', createNewDeveloperInfo)
 app.patch('/developers/:id/infos', updateDeveloperInfo)
 
 app.post('/projects', createNewProject)

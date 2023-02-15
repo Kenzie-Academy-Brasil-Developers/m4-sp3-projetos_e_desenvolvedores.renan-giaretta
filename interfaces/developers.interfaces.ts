@@ -1,15 +1,23 @@
 import { QueryResult } from "pg";
 
 interface IDeveloperRequest {
-    name: string
-    email: string
+    developerName: string
+    developerEmail: string
 }
 
 interface IDeveloper extends IDeveloperRequest {
     developerInfoId: number | null
 }
 
-type IDeveloperRequiredKeys = 'name' | 'email'
+type IDeveloperRequiredKeys = 'developerName' | 'developerEmail'
 type DeveloperResult = QueryResult<IDeveloper>
 
-export { IDeveloperRequest, IDeveloper, DeveloperResult, IDeveloperRequiredKeys }
+interface IDeveloperInfo extends IDeveloper {
+    developerInfoDeveloperSince: Date
+    developerInfoPreferredOS: string
+}
+type DeveloperInfoResult = QueryResult<IDeveloperInfo>
+
+
+
+export { IDeveloperRequest, IDeveloper, DeveloperResult, IDeveloperRequiredKeys, IDeveloperInfo, DeveloperInfoResult }
