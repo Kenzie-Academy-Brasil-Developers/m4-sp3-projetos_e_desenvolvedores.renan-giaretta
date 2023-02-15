@@ -12,10 +12,15 @@ interface IDeveloper extends IDeveloperRequest {
 type IDeveloperRequiredKeys = 'developerName' | 'developerEmail'
 type DeveloperResult = QueryResult<IDeveloper>
 
+
+
+
 interface IDeveloperInfo extends IDeveloper {
     developerInfoDeveloperSince: Date
     developerInfoPreferredOS: string
 }
+
+
 type DeveloperInfoResult = QueryResult<IDeveloperInfo>
 
 

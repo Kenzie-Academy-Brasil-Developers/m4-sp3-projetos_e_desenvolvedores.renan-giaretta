@@ -16,13 +16,13 @@ CREATE TABLE IF NOT EXISTS developers(
 ALTER TABLE "developers" ADD CONSTRAINT "fk_developerInfoId" FOREIGN KEY ( "developerInfoId" ) REFERENCES "developer_infos" ( "id" );
 
 CREATE TABLE IF NOT EXISTS projects(
-	"id" SERIAL PRIMARY KEY,
-	"name" VARCHAR(50) NOT NULL,
-	"description" TEXT NOT NULL,
-	"estimatedTime" VARCHAR(20) NOT NULL,
-	"repository" VARCHAR(120) NOT NULL,
-	"startDATE" DATE NOT NULL,
-	"endDate" DATE,
+	"projectsId" SERIAL PRIMARY KEY,
+	"projectsName" VARCHAR(50) NOT NULL,
+	"projectsDescription" TEXT NOT NULL,
+	"projectsEstimatedTime" VARCHAR(20) NOT NULL,
+	"projectsRepository" VARCHAR(120) NOT NULL,
+	"projectsStartDate" DATE NOT NULL,
+	"projectsEndDate" DATE,
 	"developerId" INTEGER NOT NULL
 );
 

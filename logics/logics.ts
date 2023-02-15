@@ -1,5 +1,5 @@
 import { Request, response, Response } from "express";
-import { QueryConfig } from "pg";
+import { QueryConfig, QueryResult } from "pg";
 import format from "pg-format";
 import { client } from "../database";
 import { IDeveloperRequest, IDeveloper, DeveloperResult, IDeveloperRequiredKeys, IDeveloperInfo, DeveloperInfoResult } from './../interfaces/developers.interfaces'
@@ -53,7 +53,6 @@ const createNewDeveloper = async ( request: Request, response: Response ): Promi
 }
 
 
-// ------UNFINISHED------
 const getAllDevelopers = async ( request: Request, response: Response ): Promise<Response> => {
     try {
         const queryString: string = `
@@ -75,11 +74,64 @@ const getAllDevelopers = async ( request: Request, response: Response ): Promise
     }
 }
 
+// const getDeveloper = async ( request: Request, response: Response ): Promise<Response> => {
+//     const developerId: number = parseInt(request.params.id)
+//     const queryString: string = `
+//     SELECT
+//         *
+//     FROM
+//         developers
+//     WHERE
+//         id = $1
+//     `
+//     const QueryConfig: QueryConfig = {
+//         text: queryString,
+//         values: [developerId]
+//     }
+//     try {
+//         const queryResult: DeveloperInfoResult = await client.query(QueryConfig)
+//         return response.status(200).json(queryResult.rows[0])
+//     } catch (error) {
+//         if(error instanceof Error){
+//             return response.status(400).json({
+//                 message: error.message
+//             })
+//         }
+//     }
+//     return response.status(500).json({
+//         message: 'internal server error'
+//     })
+// }
+
 const getDeveloper = async ( request: Request, response: Response ): Promise<Response> => {
-    return response.status(201).json({
-        message: 'aaa'
+    const developerId: number = Number(request.params.id)
+    const queryString: string = `
+    SELECT 
+        *
+        FROM 
+            developers
+        WHERE 
+            "developerId" = $1;
+    `
+    const QueryConfig: QueryConfig = {
+        text: queryString,
+        values: [developerId]
+    };
+    try {
+        const queryResult: DeveloperInfoResult = await client.query(QueryConfig)
+        return response.status(200).json(queryResult.rows[0])
+    } catch (error) {
+        if(error instanceof Error){
+            return response.status(400).json({
+                message: error.message
+            })
+        }
+    }
+    return response.status(500).json({
+        message: 'internal server error'
     })
 }
+
 
 const getAllProductsFromDeveloper = async ( request: Request, response: Response ): Promise<Response> => {
     return response.status(201).json({
@@ -88,14 +140,49 @@ const getAllProductsFromDeveloper = async ( request: Request, response: Response
 }
 
 const updateDeveloper = async ( request: Request, response: Response ): Promise<Response> => {
-    return response.status(201).json({
-        message: 'aaa'
-    })
+    const developerId: number = parseInt(request.params.id)
+    const developerDataRequest = request.body
+    const developerData = {
+        ...developerDataRequest
+    }
+    const queryString: string = format(`
+    UPDATE
+        developers
+    SET
+        (%I) = ROW (%L)
+    WHERE
+        "developerId" = $1
+        RETURNING*;
+    `,
+    Object.keys(request.body),
+    Object.values(request.body)    
+    )
+    const QueryConfig: QueryConfig = {
+        text: queryString,
+        values: [developerId]
+    }
+    const queryResult: QueryResult = await client.query(QueryConfig)
+
+
+
+    return response.status(201).json(queryResult.rows[0])
 }
 
 const deleteDeveloper = async ( request: Request, response: Response ): Promise<Response> => {
-    return response.status(201).json({
-        message: 'aaa'
+    const developerId: number = parseInt(request.params.id)
+    const queryString: string = `
+    DELETE FROM
+        developers
+    WHERE 
+        "developerId" = $1    
+    `
+    const queryConfig = {
+        text: queryString,
+        values: [developerId]
+    }
+    const queryResult: QueryResult = await client.query(queryConfig)
+    return response.status(200).json({
+        message: 'deletadu'
     })
 }
 
@@ -121,9 +208,29 @@ const createNewDeveloperInfo = async ( request: Request, response: Response ): P
 }
 
 const updateDeveloperInfo = async ( request: Request, response: Response ): Promise<Response> => {
-    return response.status(201).json({
-        message: 'aaa'
-    })
+    const developerId: number = parseInt(request.params.id)
+    const developerDataRequest: IDeveloperInfo = (request.body)
+    const developerData = {
+        ...developerDataRequest
+    }
+    const queryFormat = format(`
+    UPDATE
+        developer_infos
+    SET 
+        (%I) = ROW (%L)
+    WHERE
+        "id" = $1
+    `,
+    Object.keys(request.body),
+    Object.values(request.body)
+    )
+    const QueryConfig: QueryConfig = {
+        text: queryFormat,
+        values: [developerId]
+    }
+    const queryResult: QueryResult = await client.query(QueryConfig)
+    return response.status(200).json(queryResult.rows[0])
+
 }
 
 // PROJECTS
