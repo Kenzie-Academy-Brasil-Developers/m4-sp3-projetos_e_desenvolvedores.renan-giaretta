@@ -2,7 +2,7 @@ import { Request, response, Response } from "express";
 import { QueryConfig, QueryResult } from "pg";
 import format from "pg-format";
 import { client } from "../database";
-import { IDeveloperRequest, IDeveloper, DeveloperResult, IDeveloperRequiredKeys, IDeveloperInfo, DeveloperInfoResult } from './../interfaces/developers.interfaces'
+import { IDeveloperRequest, IDeveloper, DeveloperResult, IDeveloperRequiredKeys, IDeveloperInfo, DeveloperInfoResult, IDeveloperWithInfo, DeveloperInfoRequiredKeys } from './../interfaces/developers.interfaces'
 
 
 
@@ -14,15 +14,15 @@ const validateDeveloperData = (payload: any) => {
         throw new Error(`Required keys are ${requiredKeys}`)
     }
     const filteredKeys = Object.keys(payload).filter(key => requiredKeys.includes(key)).reduce((acc, key) => {
-    acc[key as 'developerName' | 'developerEmail'] = payload[key]
+    acc[key as 'developerInfoDeveloperSince' | 'developerEmail'] = payload[key]
     return acc
-    }, {} as { developerName: string, developerEmail: string })
+    }, {} as { developerInfoDeveloperSince: string, developerEmail: string })
     return filteredKeys
 }
 
 const createNewDeveloper = async ( request: Request, response: Response ): Promise<Response> => {
     try {
-        const developerDataRequest: IDeveloperRequest = validateDeveloperData(request.body)
+        const developerDataRequest = validateDeveloperData(request.body)
         const developerData = {
             ...developerDataRequest
         }
@@ -42,6 +42,9 @@ const createNewDeveloper = async ( request: Request, response: Response ): Promi
         return response.status(201).json(newDeveloper)
     } catch (error) {
         if(error instanceof Error){
+            if(error.message === "duplicate key value violates unique constraint \"developers_email_key\""){
+                return response.status(400).json('E-mail already exists.')
+            }
             return response.status(400).json({
                 message: error.message
             })
@@ -56,7 +59,7 @@ const createNewDeveloper = async ( request: Request, response: Response ): Promi
 const getAllDevelopers = async ( request: Request, response: Response ): Promise<Response> => {
     try {
         const queryString: string = `
-        SELECT dev."developerId", dev."developerName", dev."developerEmail", di."developerInfoDeveloperSince", di."developerInfoPreferredOS"
+        SELECT dev."developerId", dev."developerName", dev."developerEmail", dev."developerInfoId", di."developerInfoDeveloperSince", di."developerInfoPreferredOS"
             FROM developers dev
         LEFT JOIN developer_infos di ON dev."developerInfoId" = di."id";
         `
@@ -65,7 +68,7 @@ const getAllDevelopers = async ( request: Request, response: Response ): Promise
     } catch (error) {
         if( error instanceof Error) {
             return response.status(400).json({
-                message: error.message
+                message: 'BAD REQUEST.'
             })
         }
         return response.status(500).json({
@@ -74,52 +77,26 @@ const getAllDevelopers = async ( request: Request, response: Response ): Promise
     }
 }
 
-// const getDeveloper = async ( request: Request, response: Response ): Promise<Response> => {
-//     const developerId: number = parseInt(request.params.id)
-//     const queryString: string = `
-//     SELECT
-//         *
-//     FROM
-//         developers
-//     WHERE
-//         id = $1
-//     `
-//     const QueryConfig: QueryConfig = {
-//         text: queryString,
-//         values: [developerId]
-//     }
-//     try {
-//         const queryResult: DeveloperInfoResult = await client.query(QueryConfig)
-//         return response.status(200).json(queryResult.rows[0])
-//     } catch (error) {
-//         if(error instanceof Error){
-//             return response.status(400).json({
-//                 message: error.message
-//             })
-//         }
-//     }
-//     return response.status(500).json({
-//         message: 'internal server error'
-//     })
-// }
-
 const getDeveloper = async ( request: Request, response: Response ): Promise<Response> => {
+    try {
     const developerId: number = Number(request.params.id)
     const queryString: string = `
-    SELECT 
-        *
-        FROM 
-            developers
-        WHERE 
-            "developerId" = $1;
+    SELECT dev."developerId", dev."developerName", dev."developerEmail", dev."developerInfoId", di."developerInfoDeveloperSince", di."developerInfoPreferredOS"
+    FROM developers dev
+    LEFT JOIN developer_infos di ON dev."developerInfoId" = di."id"
+    WHERE 
+    "developerId" = $1
     `
     const QueryConfig: QueryConfig = {
         text: queryString,
         values: [developerId]
     };
-    try {
         const queryResult: DeveloperInfoResult = await client.query(QueryConfig)
-        return response.status(200).json(queryResult.rows[0])
+        if(queryResult.rows.length === 0 ){
+            return response.status(404).json('Developer not found.')
+        }else{
+            return response.status(200).json(queryResult.rows[0])
+        }
     } catch (error) {
         if(error instanceof Error){
             return response.status(400).json({
@@ -169,7 +146,8 @@ const updateDeveloper = async ( request: Request, response: Response ): Promise<
 }
 
 const deleteDeveloper = async ( request: Request, response: Response ): Promise<Response> => {
-    const developerId: number = parseInt(request.params.id)
+    try {
+        const developerId: number = parseInt(request.params.id)
     const queryString: string = `
     DELETE FROM
         developers
@@ -181,13 +159,36 @@ const deleteDeveloper = async ( request: Request, response: Response ): Promise<
         values: [developerId]
     }
     const queryResult: QueryResult = await client.query(queryConfig)
-    return response.status(200).json({
-        message: 'deletadu'
-    })
+    console.log(queryResult.rowCount)
+    if(queryResult.rowCount === 1){
+        return response.status(204).json()
+    }
+    else {
+        return response.status(404).json('Developer not found.')
+    }
+    } catch (error) {
+        return response.status(500).json({
+            message: 'Internal server error.'
+        })
+    }
 }
 
+const validateDeveloperInfoData = (payload: any) => {
+    const keys = Object.keys(payload)
+    const requiredKeys = ['developerInfoDeveloperSince', 'developerInfoPreferredOS', 'id'];
+    const containsAllrequired: boolean = requiredKeys.every(key => {
+        return keys.includes(key)
+    })
+    if (!containsAllrequired || keys.length > 3) {
+        throw new Error (`Required Keys are ${requiredKeys}`)
+    }
+    return payload
+}
+
+
 const createNewDeveloperInfo = async ( request: Request, response: Response ): Promise<Response> => {
-    const developerInfoDataRequest: IDeveloperInfo = request.body
+    try {
+        const developerInfoDataRequest = validateDeveloperInfoData(request.body)
     const developerInfoData = {
         ...developerInfoDataRequest
     }
@@ -201,10 +202,17 @@ const createNewDeveloperInfo = async ( request: Request, response: Response ): P
     Object.keys(developerInfoData),
     Object.values(developerInfoData)
     )
-    
     const queryResult = await client.query(queryString)
     const newDeveloperInfo = queryResult.rows[0] 
-    return response.status(201).json({ newDeveloperInfo })
+    return response.status(201).json(newDeveloperInfo)
+    } catch (error) {
+        if (error instanceof Error) {
+            return response.status(400).json({
+                message: error.message
+            })
+        }
+    }
+    return response.status(500).json('Internal server error.')
 }
 
 const updateDeveloperInfo = async ( request: Request, response: Response ): Promise<Response> => {
@@ -318,6 +326,7 @@ const deleteProject = async ( request: Request, response: Response ): Promise<Re
         projects
     WHERE
         "projectsId" = $1
+    RETURNING*;
     `,
     Object.keys(projectData),
     Object.values(projectData)
@@ -327,7 +336,7 @@ const deleteProject = async ( request: Request, response: Response ): Promise<Re
         values: [projectId]
     }
     const queryResult: QueryResult = await client.query(queryConfig)
-    return response.status(200).json('deletad') 
+    return response.status(200).json(queryResult.rows[0]) 
 }
 
 const registerTechnologyOnProject = async ( request: Request, response: Response ): Promise<Response> => {

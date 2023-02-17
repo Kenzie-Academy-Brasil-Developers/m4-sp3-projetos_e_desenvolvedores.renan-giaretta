@@ -12,17 +12,22 @@ interface IDeveloper extends IDeveloperRequest {
 type IDeveloperRequiredKeys = 'developerName' | 'developerEmail'
 type DeveloperResult = QueryResult<IDeveloper>
 
+interface IDeveloperWithInfo extends IDeveloper {
+    developerInfoDeveloperSince: Date
+    developerInfoPreferredOS: string
+}
 
+type DeveloperInfoResult = QueryResult<IDeveloperWithInfo>
 
-
-interface IDeveloperInfo extends IDeveloper {
+interface IDeveloperInfo {
     developerInfoDeveloperSince: Date
     developerInfoPreferredOS: string
 }
 
 
-type DeveloperInfoResult = QueryResult<IDeveloperInfo>
-
-
-
-export { IDeveloperRequest, IDeveloper, DeveloperResult, IDeveloperRequiredKeys, IDeveloperInfo, DeveloperInfoResult }
+type DeveloperInfoRequiredKeys = {
+    developerInfoDeveloperSince: string;
+    developerInfoPreferredOS: string;
+    id: number;
+}
+export { IDeveloperRequest, IDeveloper, DeveloperResult, IDeveloperRequiredKeys, IDeveloperWithInfo, IDeveloperInfo, DeveloperInfoResult, DeveloperInfoRequiredKeys }
