@@ -38,6 +38,7 @@ VALUES ('JavaScript'), ('Python'), ('React'), ('Express.js'), ('HTML'), ('CSS'),
 CREATE TABLE projects_technologies (
 	"id" SERIAL PRIMARY KEY,
 	"addedIn" DATE NOT NULL,
+	"projectId" INTEGER NOT NULL,
 	FOREIGN KEY ("projectId") REFERENCES projects("id") ON DELETE CASCADE,
 	"technologyId" INTEGER NOT NULL,
 	FOREIGN KEY ("technologyId") REFERENCES technologies("id")
