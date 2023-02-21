@@ -7,22 +7,22 @@ import { IDeveloperRequest, IDeveloper, DeveloperResult, IDeveloperRequiredKeys,
 
 
 const validateDeveloperData = (payload: any) => {
-    const requiredKeys: Array<string> = ['developerName', 'developerEmail']
-    const payloadKeys = Object.keys(payload)
+    const requiredKeys: Array<string> = ['name', 'email']
+    const payloadKeys: any = Object.keys(payload)
 
     if (!requiredKeys.every(key => payloadKeys.includes(key))) {
         throw new Error(`Required keys are ${requiredKeys}`)
     }
     const filteredKeys = Object.keys(payload).filter(key => requiredKeys.includes(key)).reduce((acc, key) => {
-    acc[key as 'developerInfoDeveloperSince' | 'developerEmail'] = payload[key]
+    acc[key as 'name' | 'email'] = payload[key]
     return acc
-    }, {} as { developerInfoDeveloperSince: string, developerEmail: string })
+    }, {} as { name: string, email: string })
     return filteredKeys
 }
 
 const createNewDeveloper = async ( request: Request, response: Response ): Promise<Response> => {
     try {
-        const developerDataRequest = validateDeveloperData(request.body)
+        const developerDataRequest: IDeveloperRequest = validateDeveloperData(request.body)
         const developerData = {
             ...developerDataRequest
         }
@@ -37,7 +37,7 @@ const createNewDeveloper = async ( request: Request, response: Response ): Promi
         Object.values(developerData)        
         )
         const queryResult: DeveloperResult = await client.query(queryString)
-        const newDeveloper: IDeveloperRequest = queryResult.rows[0]
+        const newDeveloper: IDeveloper = queryResult.rows[0]
         console.log(queryResult.rows[0])
         return response.status(201).json(newDeveloper)
     } catch (error) {
@@ -59,16 +59,16 @@ const createNewDeveloper = async ( request: Request, response: Response ): Promi
 const getAllDevelopers = async ( request: Request, response: Response ): Promise<Response> => {
     try {
         const queryString: string = `
-        SELECT dev."developerId", dev."developerName", dev."developerEmail", dev."developerInfoId", di."developerInfoDeveloperSince", di."developerInfoPreferredOS"
-            FROM developers dev
-        LEFT JOIN developer_infos di ON dev."developerInfoId" = di."id";
+        SELECT dev."id", dev."name", dev."email", di."id" AS "developerInfoId", to_char(di."developerSince", 'MM/DD/YYYY') AS                "developerInfoDeveloperSince", di."preferredOS" AS "developerInfoPreferredOS"
+        FROM developers dev
+        LEFT JOIN developers_info di ON dev."developerInfoId" = di."id"
         `
         const queryResult: DeveloperInfoResult = await client.query(queryString)
         return response.status(200).json(queryResult.rows)
     } catch (error) {
         if( error instanceof Error) {
             return response.status(400).json({
-                message: 'BAD REQUEST.'
+                message: 'BAD REQUEST'
             })
         }
         return response.status(500).json({
@@ -81,11 +81,13 @@ const getDeveloper = async ( request: Request, response: Response ): Promise<Res
     try {
     const developerId: number = Number(request.params.id)
     const queryString: string = `
-    SELECT dev."developerId", dev."developerName", dev."developerEmail", dev."developerInfoId", di."developerInfoDeveloperSince", di."developerInfoPreferredOS"
-    FROM developers dev
-    LEFT JOIN developer_infos di ON dev."developerInfoId" = di."id"
-    WHERE 
-    "developerId" = $1
+    SELECT 
+        dev."id", dev."name", dev."email", di."id" AS "developerInfoId", to_char(di."developerSince", 'MM/DD/YYYY') AS                "developerInfoDeveloperSince", di."preferredOS" AS "developerInfoPreferredOS"
+    FROM 
+        developers dev
+    LEFT JOIN developers_info di ON dev."developerInfoId" = di."id"
+    WHERE
+        dev."id" = $1
     `
     const QueryConfig: QueryConfig = {
         text: queryString,
@@ -100,7 +102,7 @@ const getDeveloper = async ( request: Request, response: Response ): Promise<Res
     } catch (error) {
         if(error instanceof Error){
             return response.status(400).json({
-                message: error.message
+                message: 'BAD REQUEST'
             })
         }
     }
@@ -116,9 +118,27 @@ const getAllProductsFromDeveloper = async ( request: Request, response: Response
     })
 }
 
+const validateDeveloperUpdateData = (payload: any) => {
+    const requiredKeys: Array<string> = ['name', 'email']
+    const payloadKeys: any = Object.keys(payload)
+
+    const containRequiredKey: boolean = requiredKeys.some(key=> key in payload)
+    if(!containRequiredKey) {
+        throw new Error ('Required keys are name or email.')
+    }
+
+    const filteredKeys = Object.keys(payload).filter(key => requiredKeys.includes(key)).reduce((acc, key) => {
+    acc[key as 'name' | 'email'] = payload[key]
+    return acc
+    }, {} as { name: string, email: string })
+    return filteredKeys
+}
+
 const updateDeveloper = async ( request: Request, response: Response ): Promise<Response> => {
-    const developerId: number = parseInt(request.params.id)
-    const developerDataRequest = request.body
+
+    try {
+        const developerId: number = parseInt(request.params.id)
+    const developerDataRequest: IDeveloperRequest = validateDeveloperUpdateData(request.body)
     const developerData = {
         ...developerDataRequest
     }
@@ -128,21 +148,34 @@ const updateDeveloper = async ( request: Request, response: Response ): Promise<
     SET
         (%I) = ROW (%L)
     WHERE
-        "developerId" = $1
+        "id" = $1
         RETURNING*;
     `,
-    Object.keys(request.body),
-    Object.values(request.body)    
+    Object.keys(developerData),
+    Object.values(developerData)    
     )
     const QueryConfig: QueryConfig = {
         text: queryString,
         values: [developerId]
     }
     const queryResult: QueryResult = await client.query(QueryConfig)
-
-
-
-    return response.status(201).json(queryResult.rows[0])
+    return response.status(200).json(queryResult.rows[0])
+    } catch (error) {
+        if (error instanceof Error){
+            if(error.message === "duplicate key value violates unique constraint \"developers_email_key\""){
+                return response.status(409).json({
+                    message: 'Email already exists'
+                })
+            }
+        } if( error instanceof Error) {
+            return response.status(400).json({
+                message: error.message
+            })
+        }
+    }
+    return response.status(500).json({
+        message: 'Internal server error.'
+    })
 }
 
 const deleteDeveloper = async ( request: Request, response: Response ): Promise<Response> => {
@@ -152,7 +185,7 @@ const deleteDeveloper = async ( request: Request, response: Response ): Promise<
     DELETE FROM
         developers
     WHERE 
-        "developerId" = $1    
+        "id" = $1    
     `
     const queryConfig = {
         text: queryString,
@@ -173,28 +206,28 @@ const deleteDeveloper = async ( request: Request, response: Response ): Promise<
     }
 }
 
-const validateDeveloperInfoData = (payload: any) => {
-    const keys = Object.keys(payload)
-    const requiredKeys = ['developerInfoDeveloperSince', 'developerInfoPreferredOS', 'id'];
-    const containsAllrequired: boolean = requiredKeys.every(key => {
-        return keys.includes(key)
-    })
-    if (!containsAllrequired || keys.length > 3) {
-        throw new Error (`Required Keys are ${requiredKeys}`)
-    }
-    return payload
-}
+// const validateDeveloperInfoData = (payload: any) => {
+//     const keys = Object.keys(payload)
+//     const requiredKeys = ['developerSince', 'preferredOS'];
+//     const containsAllrequired: boolean = requiredKeys.every(key => {
+//         return keys.includes(key)
+//     })
+//     if (!containsAllrequired || keys.length > 3) {
+//         throw new Error (`Required Keys are ${requiredKeys}`)
+//     }
+//     return payload
+// }
 
 
 const createNewDeveloperInfo = async ( request: Request, response: Response ): Promise<Response> => {
     try {
-        const developerInfoDataRequest = validateDeveloperInfoData(request.body)
+        const developerInfoDataRequest = request.body
     const developerInfoData = {
         ...developerInfoDataRequest
     }
     const queryString: string = format(`
     INSERT INTO
-        developer_infos(%I)
+        developers_info(%I)
     VALUES 
         (%L)
     RETURNING*;    
@@ -203,17 +236,43 @@ const createNewDeveloperInfo = async ( request: Request, response: Response ): P
     Object.values(developerInfoData)
     )
     const queryResult = await client.query(queryString)
-    const newDeveloperInfo = queryResult.rows[0] 
-    return response.status(201).json(newDeveloperInfo)
+    // const newDeveloperInfo = queryResult.rows[0] 
+    // return response.status(201).json(newDeveloperInfo)
+
+    const developerInfoId: number = parseInt(queryResult.rows[0].id)
+    console.log(queryResult.rows[0].id)
+    const developerId: number = parseInt(request.params.id)
+    
+    const putInfoOnDeveloper: string = `
+    UPDATE
+        developers
+    SET
+        "developerInfoId" = ($1)
+    WHERE
+        "id" = $2
+    RETURNING *;
+    `
+    const queryConfig: QueryConfig = {
+        text: putInfoOnDeveloper,
+        values: [ developerInfoId, developerId ]
+    }
+    await client.query(queryConfig)
+    return response.status(201).json(queryResult.rows[0])
+
     } catch (error) {
-        if (error instanceof Error) {
+        if (error instanceof Error){
+            if(error.message === "duplicate key value violates unique constraint \"developers_email_key\""){
+                return response.status(400).json('E-mail already exists.')
+            }
+        } else if (error instanceof Error) {
             return response.status(400).json({
-                message: error.message
+                message: 'cla'
             })
-        }
     }
     return response.status(500).json('Internal server error.')
 }
+}
+
 
 const updateDeveloperInfo = async ( request: Request, response: Response ): Promise<Response> => {
     const developerId: number = parseInt(request.params.id)
@@ -238,7 +297,6 @@ const updateDeveloperInfo = async ( request: Request, response: Response ): Prom
     }
     const queryResult: QueryResult = await client.query(QueryConfig)
     return response.status(200).json(queryResult.rows[0])
-
 }
 
 // PROJECTS
