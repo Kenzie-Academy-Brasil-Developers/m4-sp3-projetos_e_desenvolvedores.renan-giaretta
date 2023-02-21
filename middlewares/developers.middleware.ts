@@ -1,7 +1,6 @@
 import { NextFunction, Request, Response } from "express";
 import { QueryConfig, QueryResult } from "pg";
 import { client } from "../database";
-import { IDeveloperRequiredKeys } from "../interfaces/developers.interfaces";
 
 
 

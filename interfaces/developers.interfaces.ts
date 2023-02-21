@@ -20,8 +20,8 @@ interface IDeveloperWithInfo extends IDeveloper {
 type DeveloperInfoResult = QueryResult<IDeveloperWithInfo>
 
 interface IDeveloperInfo {
-    developerInfoDeveloperSince: Date
-    developerInfoPreferredOS: string
+    DeveloperSince: Date
+    PreferredOS: string
 }
 
 type DeveloperInfoRequiredKeys = {

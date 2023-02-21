@@ -1,8 +1,8 @@
-import { Request, response, Response } from "express";
+import { Request, Response } from "express";
 import { QueryConfig, QueryResult } from "pg";
 import format from "pg-format";
 import { client } from "../database";
-import { IDeveloperRequest, IDeveloper, DeveloperResult, IDeveloperRequiredKeys, IDeveloperInfo, DeveloperInfoResult, IDeveloperWithInfo, DeveloperInfoRequiredKeys } from './../interfaces/developers.interfaces'
+import { IDeveloperRequest, IDeveloper, DeveloperResult, DeveloperInfoResult } from './../interfaces/developers.interfaces'
 
 
 
@@ -112,11 +112,7 @@ const getDeveloper = async ( request: Request, response: Response ): Promise<Res
 }
 
 
-const getAllProductsFromDeveloper = async ( request: Request, response: Response ): Promise<Response> => {
-    return response.status(201).json({
-        message: 'aaa'
-    })
-}
+
 
 const validateDeveloperUpdateData = (payload: any) => {
     const requiredKeys: Array<string> = ['name', 'email']
@@ -197,7 +193,7 @@ const deleteDeveloper = async ( request: Request, response: Response ): Promise<
         return response.status(204).json()
     }
     else {
-        return response.status(404).json('Developer not found.')
+        return response.status(400).json('BAD REQUEST')
     }
     } catch (error) {
         return response.status(500).json({
@@ -273,36 +269,105 @@ const createNewDeveloperInfo = async ( request: Request, response: Response ): P
 }
 }
 
+const validateDeveloperInfoUpdateData = (payload: any) => {
+    const requiredKeys: Array<string> = ['developerSince', 'preferredOS']
+    const payloadKeys: any = Object.keys(payload)
 
-const updateDeveloperInfo = async ( request: Request, response: Response ): Promise<Response> => {
-    const developerId: number = parseInt(request.params.id)
-    const developerDataRequest: IDeveloperInfo = (request.body)
-    const developerData = {
-        ...developerDataRequest
-    }
-    const queryFormat = format(`
-    UPDATE
-        developer_infos
-    SET 
-        (%I) = ROW (%L)
-    WHERE
-        "id" = $1
-    `,
-    Object.keys(developerData),
-    Object.values(developerData)
-    )
-    const QueryConfig: QueryConfig = {
-        text: queryFormat,
-        values: [developerId]
-    }
-    const queryResult: QueryResult = await client.query(QueryConfig)
-    return response.status(200).json(queryResult.rows[0])
+    const containRequiredKey: boolean = requiredKeys.some(key=> key in payload)
+    if(!containRequiredKey) {
+        throw new Error ('Required keys are developerSince or preferredOS.')
+    } 
+
+    const filteredKeys = Object.keys(payload).filter(key => requiredKeys.includes(key)).reduce((acc, key) => {
+    acc[key as 'developerSince' | 'preferredOS'] = payload[key]
+    return acc
+    }, {} as { developerSince: Date, preferredOS: string })
+    console.log(filteredKeys)
+    return filteredKeys
 }
 
-// PROJECTS
+
+const updateDeveloperInfo = async ( request: Request, response: Response ): Promise<Response> => {
+    try {
+        const developerId: number = parseInt(request.params.id)
+        const developerInfoDataRequest: any = validateDeveloperInfoUpdateData(request.body)
+        const developerInfoData = {
+        ...developerInfoDataRequest
+        }
+        const queryString = `
+        SELECT
+            *
+        FROM
+            developers
+        WHERE
+            "id" = $1        
+        `
+        const queryConfigDev: QueryConfig = {
+            text: queryString,
+            values: [developerId]
+        }
+        const queryResultDev: QueryResult = await client.query(queryConfigDev)
+        const developerInfoId: number = parseInt(queryResultDev.rows[0].developerInfoId)
+        console.log(developerInfoId)
+        console.log(Object.keys(developerInfoData))
+        console.log(Object.values(developerInfoData))
+
+
+        const queryFormatUpdateInfo = format(`
+        UPDATE
+            developers_info
+        SET 
+            (%I) = ROW (%L)
+        WHERE
+            "id" = (%L)
+        RETURNING *;
+        `,
+        Object.keys(developerInfoData),
+        Object.values(developerInfoData),developerInfoId
+        );
+        
+        const queryResultUpdateInfo: QueryResult = await client.query(queryFormatUpdateInfo)
+        return response.status(200).json(queryResultUpdateInfo.rows[0])
+    } catch (error) {
+        if(error instanceof Error) {
+            if( error.message === "invalid input value for enum \"OS\": \"Other OS\"" ){
+                return response.status(400).json({
+                    message: 'Preferred OS must be Windows, Linux or MacOS'
+                })
+            }}
+            if ( error instanceof Error){
+                return response.status(400).json({
+                    message: error.message
+                })
+            }
+            }
+            return response.status(500).json({
+                message: 'Internal server error.'
+            })
+    }
+
+
+// PROJECTS--------------------------------------------------------------------------------------------------------------
+
+
+const validateProjectData = ( payload: any) => {
+    const requiredKeys: Array<string> = ['name', 'description', 'estimatedTime', 'repository', 'startDate', 'developerId']
+    const payloadKeys: any = Object.keys(payload)
+
+    if (!requiredKeys.every(key => payloadKeys.includes(key))) {
+        throw new Error(`Required keys are ${requiredKeys}`)
+    }
+    const filteredKeys = Object.keys(payload).filter(key => requiredKeys.includes(key)).reduce((acc, key) => {
+    acc[key as 'name' | 'email' | 'description' | 'estimatedTime' | 'repository' | 'startDate' | 'developerId'  ] = payload[key]
+    return acc
+    }, {} as { name: string, email: string, description: string, estimatedTime: Date, repository: string, startDate: Date, developerId: string })
+    return filteredKeys
+}
+
 
 const createNewProject = async ( request: Request, response: Response ): Promise<Response> => {
-    const projectDataRequest = request.body
+    try {
+        const projectDataRequest = validateProjectData(request.body)
     const projectData = {
         ...projectDataRequest
     }
@@ -312,45 +377,46 @@ const createNewProject = async ( request: Request, response: Response ): Promise
     VALUES(%L)
     RETURNING*;    
     `,
-    Object.keys(request.body),
-    Object.values(request.body)
+    Object.keys(projectData),
+    Object.values(projectData)
     )
     const queryResult: QueryResult = await client.query(queryFormat)
     return response.status(201).json(queryResult.rows[0])
-}
-
-const getProject = async ( request: Request, response: Response ): Promise<Response> => {
-    const projectId: number = parseInt(request.params.id)
-    const queryString = `
-    SELECT 
-        *
-    FROM
-        projects
-    WHERE
-        "projectsId" = $1
-    `
-    const queryConfig: QueryConfig = {
-        text: queryString,
-        values: [projectId]
+    } catch (error) {
+        if(error instanceof Error){
+            return response.status(400).json({
+                message: error.message
+            })
+        }
     }
-    const queryResult: QueryResult = await client.query(queryConfig)
-    return response.status(209).json(queryResult.rows[0])
+    return response.status(500).json({
+        message: 'Internal server error.'
+    })
 }
 
-const getAllProjects = async ( request: Request, response: Response ): Promise<Response> => {
-    const queryString: string = `
-    SELECT
-        *
-    FROM
-        projects
-    `
-    const queryResult = await client.query(queryString)
-    return response.status(200).json(queryResult.rows)
+
+
+const validateUpdateProjectData = ( payload: any ) => {
+    const requiredKeys: Array<string> = ['endDate', 'estimatedTime']
+    const payloadKeys: any = Object.keys(payload)
+
+    if (!requiredKeys.some(key => payloadKeys.includes(key))) {
+        const keys = requiredKeys.join(', ')
+        throw new Error(`Required keys are ${keys}`)
+    }
+    const filteredKeys = Object.keys(payload).filter(key => requiredKeys.includes(key)).reduce((acc, key) => {
+    acc[key as 'endDate' |'estimatedTime'  ] = payload[key]
+    return acc
+    }, {} as { endDate: Date, estimatedTime: string})
+    return filteredKeys
+
 }
+
 
 const updateProject = async ( request: Request, response: Response ): Promise<Response> => {
-    const projectId: number = parseInt(request.params.id)
-    const projectDataRequest = request.body
+    try {
+        const projectId: number = parseInt(request.params.id)
+    const projectDataRequest = validateUpdateProjectData(request.body)
     const projectData = {
         ...projectDataRequest
     }
@@ -360,7 +426,7 @@ const updateProject = async ( request: Request, response: Response ): Promise<Re
     SET
         (%I) = ROW (%L)
     WHERE
-        "projectsId" = $1
+        "id" = $1
     `,
     Object.keys(projectData),
     Object.values(projectData)
@@ -371,10 +437,77 @@ const updateProject = async ( request: Request, response: Response ): Promise<Re
     }
     const queryResult: QueryResult = await client.query(queryConfig)
     return response.status(200).json(projectData)
+    } catch (error) {
+        if( error instanceof Error) {
+            return response.status(400).json({
+                message: error.message
+            })
+        }
+    }
+    return response.status(500).json({
+        message: 'Internal server error.'
+    })
+
+    
 }
 
+
+const getProject = async ( request: Request, response: Response ): Promise<Response> => {
+    try {
+        const projectId: number = parseInt(request.params.id)
+    const queryString = `
+    SELECT 
+        *
+    FROM
+        projects
+    WHERE
+        "id" = $1
+    `
+    const queryConfig: QueryConfig = {
+        text: queryString,
+        values: [projectId]
+    }
+    const queryResult: QueryResult = await client.query(queryConfig)
+    return response.status(209).json(queryResult.rows[0])
+    } catch (error) {
+        if( error instanceof Error ) {
+            return response.status(400).json({
+                message: 'BAD REQUEST'
+            })
+        }
+    }
+    return response.status(500).json({
+        message: 'Internal server error'
+    })
+}
+
+const getAllProjects = async ( request: Request, response: Response ): Promise<Response> => {
+    try {
+        const queryString: string = `
+    SELECT
+        *
+    FROM
+        projects
+    `
+    const queryResult = await client.query(queryString)
+    return response.status(200).json(queryResult.rows)
+    } catch (error) {
+        if (error instanceof Error){
+            return response.status(400).json({
+                message: 'BAD REQUEST'
+            })
+        }
+    }
+    return response.status(500).json({
+        message: 'Internal server error.'
+    })
+}
+
+
+
 const deleteProject = async ( request: Request, response: Response ): Promise<Response> => {
-    const projectId = parseInt(request.params.id)
+    try {
+        const projectId = parseInt(request.params.id)
     const projectDataRequest = request.body
     const projectData = {
         ...projectDataRequest
@@ -383,7 +516,7 @@ const deleteProject = async ( request: Request, response: Response ): Promise<Re
     DELETE FROM
         projects
     WHERE
-        "projectsId" = $1
+        "id" = $1
     RETURNING*;
     `,
     Object.keys(projectData),
@@ -394,18 +527,192 @@ const deleteProject = async ( request: Request, response: Response ): Promise<Re
         values: [projectId]
     }
     const queryResult: QueryResult = await client.query(queryConfig)
-    return response.status(200).json(queryResult.rows[0]) 
+    return response.status(204).json()
+    } catch (error) {
+        if (error instanceof Error) {
+            return response.status(400).json({
+                message: 'BAD REQUEST'
+            })
+        }
+    }
+    return response.status(500).json({
+        message: 'Internal server error.'
+    })
+}
+
+const getAllProductsFromDeveloper = async ( request: Request, response: Response ): Promise<Response> => {
+    try {
+        const developerId = parseInt(request.params.id)
+    const queryString = `
+    SELECT
+        dev."id" AS "developerID",
+        dev."name" AS "developerName",
+        dev."email" AS "developerEmail",
+        dev."developerInfoId" AS "developerInfoID",
+        to_char(di."developerSince", 'YYYY/MM/DD') AS "developerInfoSince",
+        di."preferredOS" AS "developerInfoPreferredOS",
+        proj."id" AS "projectID",
+        proj."name" AS "projectName",
+        proj."description" AS "projectDescription",
+        proj."estimatedTime" AS "projectEstimatedTime",
+        proj."repository" AS "projectRepository",
+        to_char(proj."startDate", 'YYYY/MM/DD') AS "projectStartDate",
+        to_char(proj."endDate", 'YYYY/MM/DD') AS "projectEndDate",
+        proj."developerId" AS "projectDeveloperID",
+        tech."id" AS "technologyID",
+        tech."name" AS "technologyName"
+    FROM
+        projects proj
+    LEFT JOIN
+        projects_technologies pt ON pt."projectId" = proj."id"
+    LEFT JOIN
+        technologies tech ON tech."id" = pt."technologyId"
+    LEFT JOIN
+        developers dev ON dev."id" = proj."developerId"
+    LEFT JOIN
+        developers_info di ON di."id" = dev."developerInfoId"
+    WHERE
+        proj."developerId" = $1
+    `
+    const queryConfig: QueryConfig = {
+        text: queryString,
+        values: [developerId]
+    }
+    const queryResult: QueryResult = await client.query(queryConfig)
+    if ( queryResult.rows.length === 0 ) {
+        return response.status(200).json({
+            message: 'Developer does not belong to any project.'
+        })
+    }else {
+        return response.status(200).json(queryResult.rows)
+    }
+    } catch (error) {
+        if ( error instanceof Error ) {
+            return response.status(400).json({
+                message: 'BAD REQUEST'
+            })
+        }
+    }
+    return response.status(500).json({
+        message: 'Internal server error.'
+    })
 }
 
 const registerTechnologyOnProject = async ( request: Request, response: Response ): Promise<Response> => {
-    return response.status(201).json({
-        message: 'aaa'
+    try {
+        const projectId: number = parseInt(request.params.id)
+    const technologyData = request.body
+    const queryStringTech: string = `
+    SELECT
+        *
+    FROM
+        technologies
+    WHERE
+        name = $1
+    `
+    const queryConfigTech: QueryConfig = {
+        text: queryStringTech,
+        values: [technologyData.name]
+    }
+    const queryResultTech: QueryResult = await client.query(queryConfigTech)
+
+    const addTech = {
+        addedIn: new Date().toLocaleDateString(),
+        projectId: projectId,
+        technologyId: Number(queryResultTech.rows[0].id)
+    }
+
+    const queryFormat = format(`
+        INSERT INTO
+            projects_technologies (%I)
+        VALUES
+            (%L)
+        RETURNING *;
+    `,
+    Object.keys(addTech),
+    Object.values(addTech)
+    )
+    const queryResultAddTech: QueryResult = await client.query(queryFormat)
+    return response.status(200).json(queryResultAddTech.rows)
+    } catch (error) {
+        if ( error instanceof Error ) {
+            if( error.message === "Cannot read properties of undefined (reading 'id')" ){
+                return response.status(400).json({
+                    message: 'Technology not supported'
+                })
+            }
+        }
+        if( error instanceof Error) {
+            return response.status(400).json({
+                message: 'BAD REQUEST'
+            })
+        }
+    }
+    return response.status(500).json({
+        message: 'Internal server error.'
     })
 }
 
 const deleteTechnologyFromProject = async ( request: Request, response: Response ): Promise<Response> => {
-    return response.status(201).json({
-        message: 'aaa'
+    try {
+        const projectId = parseInt(request.params.id)
+    const queryString: string = `
+    SELECT
+        *
+    FROM
+        technologies
+    WHERE
+        name = $1    
+    `
+    const queryConfig: QueryConfig = {
+        text: queryString,
+        values: [request.params.name]
+    }
+    const queryResult: QueryResult = await client.query(queryConfig)
+    const techId: number = parseInt(queryResult.rows[0].id)
+
+    const queryStringVerify: string = `
+    SELECT
+        *
+    FROM projects_technologies
+    WHERE "technologyId" = $1 AND "projectId" = $2
+    `
+    const queryConfigVerify: QueryConfig = {
+        text: queryStringVerify,
+        values: [techId, projectId]
+    }
+    const queryResultVerify: QueryResult = await client.query(queryConfigVerify)
+
+    const deleteTechId: number = parseInt(queryResultVerify.rows[0].id)
+
+    const queryStringDelete: string = `
+    DELETE FROM
+        projects_technologies
+    WHERE
+        "id" = $1
+    `
+    const queryConfigDelete: QueryConfig = {
+        text: queryStringDelete,
+        values: [deleteTechId]
+    }
+    await client.query(queryConfigDelete)
+    return response.status(204).json()
+    } catch (error) {
+        if ( error instanceof Error ) {
+            if ( error.message === "Cannot read properties of undefined (reading 'id')" ){
+                return response.status(404).json({
+                    message: 'Technology not supported'
+                })
+            }
+        }
+        if ( error instanceof Error ) {
+            return response.status(400).json({
+                message: error.message
+            })
+        }
+    }
+    return response.status(500).json({
+        message: 'Internal server error.'
     })
 }
 

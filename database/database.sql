@@ -19,7 +19,7 @@ CREATE TABLE projects (
 	"name" VARCHAR(50) NOT NULL,
 	"description" TEXT NOT NULL,
 	"estimatedTime" VARCHAR(20) NOT NULL,
-	"repositoty" VARCHAR(120) NOT NULL,
+	"repository" VARCHAR(120) NOT NULL,
 	"startDate" DATE NOT NULL,
 	"endDate" DATE,
 	"developerId" INTEGER NOT NULL,
