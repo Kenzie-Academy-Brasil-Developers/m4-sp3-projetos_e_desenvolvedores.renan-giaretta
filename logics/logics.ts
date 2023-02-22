@@ -1,14 +1,14 @@
-import { Request, Response } from "express";
-import { QueryConfig, QueryResult } from "pg";
-import format from "pg-format";
-import { client } from "../database";
+import { Request, Response } from 'express';
+import { QueryConfig, QueryResult } from 'pg';
+import format from 'pg-format';
+import { client } from '../database';
 import { IDeveloperRequest, IDeveloper, DeveloperResult, DeveloperInfoResult } from './../interfaces/developers.interfaces'
 
 
 
 const validateDeveloperData = (payload: any) => {
     const requiredKeys: Array<string> = ['name', 'email']
-    const payloadKeys: any = Object.keys(payload)
+    const payloadKeys: any            = Object.keys(payload)
 
     if (!requiredKeys.every(key => payloadKeys.includes(key))) {
         throw new Error(`Required keys are ${requiredKeys}`)
@@ -23,7 +23,7 @@ const validateDeveloperData = (payload: any) => {
 const createNewDeveloper = async ( request: Request, response: Response ): Promise<Response> => {
     try {
         const developerDataRequest: IDeveloperRequest = validateDeveloperData(request.body)
-        const developerData = {
+        const developerData                           = {
             ...developerDataRequest
         }
         const queryString: string = format(`
@@ -37,8 +37,7 @@ const createNewDeveloper = async ( request: Request, response: Response ): Promi
         Object.values(developerData)        
         )
         const queryResult: DeveloperResult = await client.query(queryString)
-        const newDeveloper: IDeveloper = queryResult.rows[0]
-        console.log(queryResult.rows[0])
+        const newDeveloper: IDeveloper     = queryResult.rows[0]
         return response.status(201).json(newDeveloper)
     } catch (error) {
         if(error instanceof Error){
@@ -90,7 +89,7 @@ const getDeveloper = async ( request: Request, response: Response ): Promise<Res
         dev."id" = $1
     `
     const QueryConfig: QueryConfig = {
-        text: queryString,
+        text  : queryString,
         values: [developerId]
     };
         const queryResult: DeveloperInfoResult = await client.query(QueryConfig)
@@ -116,7 +115,7 @@ const getDeveloper = async ( request: Request, response: Response ): Promise<Res
 
 const validateDeveloperUpdateData = (payload: any) => {
     const requiredKeys: Array<string> = ['name', 'email']
-    const payloadKeys: any = Object.keys(payload)
+    const payloadKeys: any            = Object.keys(payload)
 
     const containRequiredKey: boolean = requiredKeys.some(key=> key in payload)
     if(!containRequiredKey) {
@@ -133,9 +132,9 @@ const validateDeveloperUpdateData = (payload: any) => {
 const updateDeveloper = async ( request: Request, response: Response ): Promise<Response> => {
 
     try {
-        const developerId: number = parseInt(request.params.id)
+    const developerId: number                     = parseInt(request.params.id)
     const developerDataRequest: IDeveloperRequest = validateDeveloperUpdateData(request.body)
-    const developerData = {
+    const developerData                           = {
         ...developerDataRequest
     }
     const queryString: string = format(`
@@ -151,7 +150,7 @@ const updateDeveloper = async ( request: Request, response: Response ): Promise<
     Object.values(developerData)    
     )
     const QueryConfig: QueryConfig = {
-        text: queryString,
+        text  : queryString,
         values: [developerId]
     }
     const queryResult: QueryResult = await client.query(QueryConfig)
@@ -176,19 +175,18 @@ const updateDeveloper = async ( request: Request, response: Response ): Promise<
 
 const deleteDeveloper = async ( request: Request, response: Response ): Promise<Response> => {
     try {
-        const developerId: number = parseInt(request.params.id)
+    const developerId: number = parseInt(request.params.id)
     const queryString: string = `
     DELETE FROM
         developers
     WHERE 
-        "id" = $1    
+        "id" = $1
     `
     const queryConfig = {
-        text: queryString,
+        text  : queryString,
         values: [developerId]
     }
     const queryResult: QueryResult = await client.query(queryConfig)
-    console.log(queryResult.rowCount)
     if(queryResult.rowCount === 1){
         return response.status(204).json()
     }
@@ -202,23 +200,12 @@ const deleteDeveloper = async ( request: Request, response: Response ): Promise<
     }
 }
 
-// const validateDeveloperInfoData = (payload: any) => {
-//     const keys = Object.keys(payload)
-//     const requiredKeys = ['developerSince', 'preferredOS'];
-//     const containsAllrequired: boolean = requiredKeys.every(key => {
-//         return keys.includes(key)
-//     })
-//     if (!containsAllrequired || keys.length > 3) {
-//         throw new Error (`Required Keys are ${requiredKeys}`)
-//     }
-//     return payload
-// }
 
 
 const createNewDeveloperInfo = async ( request: Request, response: Response ): Promise<Response> => {
     try {
-        const developerInfoDataRequest = request.body
-    const developerInfoData = {
+    const developerInfoDataRequest = request.body
+    const developerInfoData        = {
         ...developerInfoDataRequest
     }
     const queryString: string = format(`
@@ -232,12 +219,9 @@ const createNewDeveloperInfo = async ( request: Request, response: Response ): P
     Object.values(developerInfoData)
     )
     const queryResult = await client.query(queryString)
-    // const newDeveloperInfo = queryResult.rows[0] 
-    // return response.status(201).json(newDeveloperInfo)
 
     const developerInfoId: number = parseInt(queryResult.rows[0].id)
-    console.log(queryResult.rows[0].id)
-    const developerId: number = parseInt(request.params.id)
+    const developerId: number     = parseInt(request.params.id)
     
     const putInfoOnDeveloper: string = `
     UPDATE
@@ -249,7 +233,7 @@ const createNewDeveloperInfo = async ( request: Request, response: Response ): P
     RETURNING *;
     `
     const queryConfig: QueryConfig = {
-        text: putInfoOnDeveloper,
+        text  : putInfoOnDeveloper,
         values: [ developerInfoId, developerId ]
     }
     await client.query(queryConfig)
@@ -271,7 +255,7 @@ const createNewDeveloperInfo = async ( request: Request, response: Response ): P
 
 const validateDeveloperInfoUpdateData = (payload: any) => {
     const requiredKeys: Array<string> = ['developerSince', 'preferredOS']
-    const payloadKeys: any = Object.keys(payload)
+    const payloadKeys: any            = Object.keys(payload)
 
     const containRequiredKey: boolean = requiredKeys.some(key=> key in payload)
     if(!containRequiredKey) {
@@ -282,16 +266,15 @@ const validateDeveloperInfoUpdateData = (payload: any) => {
     acc[key as 'developerSince' | 'preferredOS'] = payload[key]
     return acc
     }, {} as { developerSince: Date, preferredOS: string })
-    console.log(filteredKeys)
     return filteredKeys
 }
 
 
 const updateDeveloperInfo = async ( request: Request, response: Response ): Promise<Response> => {
     try {
-        const developerId: number = parseInt(request.params.id)
+        const developerId: number           = parseInt(request.params.id)
         const developerInfoDataRequest: any = validateDeveloperInfoUpdateData(request.body)
-        const developerInfoData = {
+        const developerInfoData             = {
         ...developerInfoDataRequest
         }
         const queryString = `
@@ -300,17 +283,14 @@ const updateDeveloperInfo = async ( request: Request, response: Response ): Prom
         FROM
             developers
         WHERE
-            "id" = $1        
+            "id" = $1
         `
         const queryConfigDev: QueryConfig = {
-            text: queryString,
+            text  : queryString,
             values: [developerId]
         }
         const queryResultDev: QueryResult = await client.query(queryConfigDev)
-        const developerInfoId: number = parseInt(queryResultDev.rows[0].developerInfoId)
-        console.log(developerInfoId)
-        console.log(Object.keys(developerInfoData))
-        console.log(Object.values(developerInfoData))
+        const developerInfoId: number     = parseInt(queryResultDev.rows[0].developerInfoId)
 
 
         const queryFormatUpdateInfo = format(`
@@ -347,12 +327,12 @@ const updateDeveloperInfo = async ( request: Request, response: Response ): Prom
     }
 
 
-// PROJECTS--------------------------------------------------------------------------------------------------------------
+  // PROJECTS--------------------------------------------------------------------------------------------------------------
 
 
 const validateProjectData = ( payload: any) => {
     const requiredKeys: Array<string> = ['name', 'description', 'estimatedTime', 'repository', 'startDate', 'developerId']
-    const payloadKeys: any = Object.keys(payload)
+    const payloadKeys: any            = Object.keys(payload)
 
     if (!requiredKeys.every(key => payloadKeys.includes(key))) {
         throw new Error(`Required keys are ${requiredKeys}`)
@@ -367,8 +347,8 @@ const validateProjectData = ( payload: any) => {
 
 const createNewProject = async ( request: Request, response: Response ): Promise<Response> => {
     try {
-        const projectDataRequest = validateProjectData(request.body)
-    const projectData = {
+    const projectDataRequest = validateProjectData(request.body)
+    const projectData        = {
         ...projectDataRequest
     }
     const queryFormat = format(`
@@ -398,7 +378,7 @@ const createNewProject = async ( request: Request, response: Response ): Promise
 
 const validateUpdateProjectData = ( payload: any ) => {
     const requiredKeys: Array<string> = ['endDate', 'estimatedTime']
-    const payloadKeys: any = Object.keys(payload)
+    const payloadKeys: any            = Object.keys(payload)
 
     if (!requiredKeys.some(key => payloadKeys.includes(key))) {
         const keys = requiredKeys.join(', ')
@@ -415,9 +395,9 @@ const validateUpdateProjectData = ( payload: any ) => {
 
 const updateProject = async ( request: Request, response: Response ): Promise<Response> => {
     try {
-        const projectId: number = parseInt(request.params.id)
+    const projectId: number  = parseInt(request.params.id)
     const projectDataRequest = validateUpdateProjectData(request.body)
-    const projectData = {
+    const projectData        = {
         ...projectDataRequest
     }
     const queryFormat = format(`
@@ -432,7 +412,7 @@ const updateProject = async ( request: Request, response: Response ): Promise<Re
     Object.values(projectData)
     )
     const queryConfig: QueryConfig = {
-        text: queryFormat,
+        text  : queryFormat,
         values: [projectId]
     }
     const queryResult: QueryResult = await client.query(queryConfig)
@@ -454,8 +434,8 @@ const updateProject = async ( request: Request, response: Response ): Promise<Re
 
 const getProject = async ( request: Request, response: Response ): Promise<Response> => {
     try {
-        const projectId: number = parseInt(request.params.id)
-    const queryString = `
+    const projectId: number = parseInt(request.params.id)
+    const queryString       = `
     SELECT 
         *
     FROM
@@ -464,7 +444,7 @@ const getProject = async ( request: Request, response: Response ): Promise<Respo
         "id" = $1
     `
     const queryConfig: QueryConfig = {
-        text: queryString,
+        text  : queryString,
         values: [projectId]
     }
     const queryResult: QueryResult = await client.query(queryConfig)
@@ -507,9 +487,9 @@ const getAllProjects = async ( request: Request, response: Response ): Promise<R
 
 const deleteProject = async ( request: Request, response: Response ): Promise<Response> => {
     try {
-        const projectId = parseInt(request.params.id)
+    const projectId          = parseInt(request.params.id)
     const projectDataRequest = request.body
-    const projectData = {
+    const projectData        = {
         ...projectDataRequest
     }
     const queryString: string = format(`
@@ -523,7 +503,7 @@ const deleteProject = async ( request: Request, response: Response ): Promise<Re
     Object.values(projectData)
     )
     const queryConfig: QueryConfig = {
-        text: queryString,
+        text  : queryString,
         values: [projectId]
     }
     const queryResult: QueryResult = await client.query(queryConfig)
@@ -542,7 +522,7 @@ const deleteProject = async ( request: Request, response: Response ): Promise<Re
 
 const getAllProductsFromDeveloper = async ( request: Request, response: Response ): Promise<Response> => {
     try {
-        const developerId = parseInt(request.params.id)
+    const developerId = parseInt(request.params.id)
     const queryString = `
     SELECT
         dev."id" AS "developerID",
@@ -575,7 +555,7 @@ const getAllProductsFromDeveloper = async ( request: Request, response: Response
         proj."developerId" = $1
     `
     const queryConfig: QueryConfig = {
-        text: queryString,
+        text  : queryString,
         values: [developerId]
     }
     const queryResult: QueryResult = await client.query(queryConfig)
@@ -600,8 +580,8 @@ const getAllProductsFromDeveloper = async ( request: Request, response: Response
 
 const registerTechnologyOnProject = async ( request: Request, response: Response ): Promise<Response> => {
     try {
-        const projectId: number = parseInt(request.params.id)
-    const technologyData = request.body
+    const projectId: number       = parseInt(request.params.id)
+    const technologyData          = request.body
     const queryStringTech: string = `
     SELECT
         *
@@ -611,14 +591,14 @@ const registerTechnologyOnProject = async ( request: Request, response: Response
         name = $1
     `
     const queryConfigTech: QueryConfig = {
-        text: queryStringTech,
+        text  : queryStringTech,
         values: [technologyData.name]
     }
     const queryResultTech: QueryResult = await client.query(queryConfigTech)
 
     const addTech = {
-        addedIn: new Date().toLocaleDateString(),
-        projectId: projectId,
+        addedIn     : new Date().toLocaleDateString(),
+        projectId   : projectId,
         technologyId: Number(queryResultTech.rows[0].id)
     }
 
@@ -655,21 +635,21 @@ const registerTechnologyOnProject = async ( request: Request, response: Response
 
 const deleteTechnologyFromProject = async ( request: Request, response: Response ): Promise<Response> => {
     try {
-        const projectId = parseInt(request.params.id)
+    const projectId           = parseInt(request.params.id)
     const queryString: string = `
     SELECT
         *
     FROM
         technologies
     WHERE
-        name = $1    
+        name = $1
     `
     const queryConfig: QueryConfig = {
-        text: queryString,
+        text  : queryString,
         values: [request.params.name]
     }
     const queryResult: QueryResult = await client.query(queryConfig)
-    const techId: number = parseInt(queryResult.rows[0].id)
+    const techId: number           = parseInt(queryResult.rows[0].id)
 
     const queryStringVerify: string = `
     SELECT
@@ -678,7 +658,7 @@ const deleteTechnologyFromProject = async ( request: Request, response: Response
     WHERE "technologyId" = $1 AND "projectId" = $2
     `
     const queryConfigVerify: QueryConfig = {
-        text: queryStringVerify,
+        text  : queryStringVerify,
         values: [techId, projectId]
     }
     const queryResultVerify: QueryResult = await client.query(queryConfigVerify)
@@ -692,7 +672,7 @@ const deleteTechnologyFromProject = async ( request: Request, response: Response
         "id" = $1
     `
     const queryConfigDelete: QueryConfig = {
-        text: queryStringDelete,
+        text  : queryStringDelete,
         values: [deleteTechId]
     }
     await client.query(queryConfigDelete)

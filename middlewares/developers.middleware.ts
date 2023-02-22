@@ -19,7 +19,6 @@ const verifyDeveloperInfoData = async (request: Request, response: Response, nex
         values: [developerId]
     }
     const queryResult: QueryResult = await client.query(queryConfig)
-    console.log(queryResult.rows)
     if(queryResult.rows.length === 0){
         return response.status(404).json('Developer not found')
     } else if (queryResult.rows[0].developerInfoId !== null){
