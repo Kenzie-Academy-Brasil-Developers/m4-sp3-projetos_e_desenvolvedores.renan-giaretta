@@ -3,19 +3,18 @@ import { QueryConfig, QueryResult } from "pg";
 import { client } from "../database";
 
 
-
 const verifyDeveloperInfoData = async (request: Request, response: Response, next: NextFunction) =>{
     const developerId: number = parseInt(request.params.id)
     const queryString: string = `
-    SELECT
-        *
-    FROM
-        developers
-    WHERE 
-        "id" = ($1)
+        SELECT
+            *
+        FROM
+            developers
+        WHERE 
+            "id" = ($1)
     `
     const queryConfig: QueryConfig = {
-        text: queryString,
+        text  : queryString,
         values: [developerId]
     }
     const queryResult: QueryResult = await client.query(queryConfig)
@@ -33,17 +32,17 @@ const verifyDeveloperInfoData = async (request: Request, response: Response, nex
 }
 
 const checkDeveloperId = async ( request:Request, response: Response, next: NextFunction  ) =>{
-    const developerId = parseInt(request.params.id)
-    const queryString = `
-    SELECT
-        *
-    FROM
-        developers
-    WHERE
-        "id" = $1   
+    const developerId: number = parseInt(request.params.id)
+    const queryString: string = `
+        SELECT
+            *
+        FROM
+            developers
+        WHERE
+            "id" = $1
     `;
     const queryConfig: QueryConfig = {
-        text: queryString,
+        text  : queryString,
         values: [developerId]
     }
     const queryResult: QueryResult = await client.query(queryConfig)
@@ -56,17 +55,17 @@ const checkDeveloperId = async ( request:Request, response: Response, next: Next
 }
 
 const checkDeveloperEmail = async ( request: Request, response: Response, next: NextFunction ) => {
-    const developerEmail = parseInt(request.body.email)
-    const queryString = `
-    SELECT
-        *
-    FROM
-        developers
-    WHERE
-        "email" = $1    
+    const developerEmail: string = request.body.email
+    const queryString: string    = `
+        SELECT
+            *
+        FROM
+            developers
+        WHERE
+            "email" = $1
     `;
     const queryConfig: QueryConfig = {
-        text: queryString,
+        text  : queryString,
         values: [developerEmail]
     }
     const queryResult: QueryResult = await client.query(queryConfig)
